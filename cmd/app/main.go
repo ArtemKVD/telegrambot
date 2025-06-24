@@ -1,11 +1,5 @@
 package main
 
-//export TELEGRAM_BOT_TOKEN="7327484425:AAFbqP5IYMAIdXoVBzRieM4HESMxEHFtpqY"
-//export DB_HOST=localhost
-//export DB_PORT=5432
-//export DB_USER=postgres
-//export DB_PASSWORD=yourpass
-//export DB_NAME=botdb
 import (
 	"log"
 	"os"
