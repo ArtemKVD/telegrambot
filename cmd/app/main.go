@@ -7,11 +7,18 @@ import (
 	DB "telegrambot/internal/database"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	_ "github.com/lib/pq"
 )
 
 func main() {
+
 	DB.SetDbConfig()
-	defer DB.Db.Close()
+
+	defer func() {
+		if DB.Db != nil {
+			DB.Db.Close()
+		}
+	}()
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_TOKEN"))
 	if err != nil {
@@ -89,6 +96,7 @@ func main() {
 				log.Printf("DB error: %v", err)
 			} else {
 				sendMessage(bot, chatID, "Data saved")
+				log.Print("info about user saved")
 			}
 		}
 	}
@@ -97,6 +105,6 @@ func main() {
 func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	if _, err := bot.Send(msg); err != nil {
-		log.Printf("Ошибка отправки: %v", err)
+		log.Printf("send message error: %v", err)
 	}
 }

@@ -1,15 +1,17 @@
-package DB
+package database
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 var Db *sql.DB
 
-func SetDbConfig() {
+func SetDbConfig() error {
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
@@ -18,17 +20,26 @@ func SetDbConfig() {
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
 	)
-	db, err := sql.Open("postgres", connStr)
+
+	var err error
+	Db, err = sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("connection error")
 	}
-	db.Ping()
+
+	log.Println("postgres connect")
+	return nil
 }
 
 func InsertUser(username, weight, height, gender string, lost, set, get int) error {
+	if Db == nil {
+		return fmt.Errorf("error db")
+	}
+
 	_, err := Db.Exec(`
-		INSERT INTO bot_users (username, weight, height, gender, Kforlost, Kforset, Kforget) 
+		INSERT INTO bot_users (username, weight, height, gender, kforlost, kforset, kforget) 
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		username, weight, height, gender, lost, get, set)
+		username, weight, height, gender, lost, set, get)
+
 	return err
 }
