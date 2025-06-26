@@ -31,15 +31,25 @@ func SetDbConfig() error {
 	return nil
 }
 
-func InsertUser(username, weight, height, gender string, lost, set, get int) error {
+func InsertUser(username, weight, height, gender, program string, lost, set, get int) error {
 	if Db == nil {
 		return fmt.Errorf("error db")
 	}
 
 	_, err := Db.Exec(`
-		INSERT INTO bot_users (username, weight, height, gender, kforlost, kforset, kforget) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		username, weight, height, gender, lost, set, get)
+        INSERT INTO bot_users (username, weight, height, gender, kforlost, kforset, kforget, program) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (username) 
+        DO UPDATE SET 
+            weight = EXCLUDED.weight,
+            height = EXCLUDED.height,
+            gender = EXCLUDED.gender,
+            kforlost = EXCLUDED.kforlost,
+            kforset = EXCLUDED.kforset,
+            kforget = EXCLUDED.kforget,
+			program = EXCLUDED.program`,
+
+		username, weight, height, gender, lost, set, get, program)
 
 	return err
 }

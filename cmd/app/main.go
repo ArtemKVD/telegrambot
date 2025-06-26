@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	calc "telegrambot/internal/calculate"
 	DB "telegrambot/internal/database"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -21,6 +22,7 @@ func main() {
 	}()
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_TOKEN"))
+
 	if err != nil {
 		log.Panic(err)
 	}
@@ -28,10 +30,11 @@ func main() {
 	log.Print("Бот запущен")
 
 	type userData struct {
-		step   string
-		weight string
-		height string
-		gender string
+		step    string
+		weight  string
+		height  string
+		gender  string
+		program string
 	}
 	users := make(map[int64]userData)
 
@@ -80,7 +83,32 @@ func main() {
 			sendMessage(bot, chatID, "set your gender:")
 
 		case "gender":
-			data.gender = update.Message.Text
+			gender := update.Message.Text
+			if gender != "м" && gender != "ж" {
+				sendMessage(bot, chatID, "Ошибка! Введите 'м' или 'ж':")
+				continue
+			}
+
+			data.gender = gender
+			data.step = "program"
+			users[userID] = data
+
+			sendMessage(bot, chatID, "choose your program:")
+
+			msg := tgbotapi.NewMessage(chatID, "Выберите программу:")
+			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
+				tgbotapi.NewKeyboardButtonRow(
+					tgbotapi.NewKeyboardButton("Похудение"),
+					tgbotapi.NewKeyboardButton("Поддержание"),
+					tgbotapi.NewKeyboardButton("Набор массы"),
+				),
+			)
+			if _, err := bot.Send(msg); err != nil {
+				log.Printf("send error: %v", err)
+			}
+		case "program":
+			program := update.Message.Text
+			data.program = program
 			users[userID] = data
 
 			err := DB.InsertUser(
@@ -88,16 +116,18 @@ func main() {
 				data.weight,
 				data.height,
 				data.gender,
-				1, 1, 1,
+				data.program,
+				calc.Kforlost(data.gender, data.weight, data.height),
+				calc.Kforset(data.gender, data.weight, data.height),
+				calc.Kforget(data.gender, data.weight, data.height),
 			)
-
 			if err != nil {
-				sendMessage(bot, chatID, "data not saved")
-				log.Printf("DB error: %v", err)
-			} else {
-				sendMessage(bot, chatID, "Data saved")
-				log.Print("info about user saved")
+				log.Printf("user not insert %v", err)
 			}
+			msg := tgbotapi.NewMessage(chatID, "program set")
+			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+
+			delete(users, userID)
 		}
 	}
 }

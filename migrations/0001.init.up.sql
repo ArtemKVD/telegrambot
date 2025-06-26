@@ -5,5 +5,6 @@ REATE TABLE bot_users (
     gender TEXT NOT NULL,
     kforlost INTEGER,
     kforset INTEGER,
-    kforget INTEGER
+    kforget INTEGER,
+    program TEXT
 );
