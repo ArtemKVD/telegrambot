@@ -6,13 +6,15 @@ import (
 	"strconv"
 	calc "telegrambot/internal/calculate"
 	DB "telegrambot/internal/database"
+	Redis "telegrambot/internal/redis"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-
+	Redis.InitRedis()
+	log.Print("redis connect")
 	DB.SetDbConfig()
 
 	defer func() {
@@ -126,6 +128,7 @@ func main() {
 			}
 			msg := tgbotapi.NewMessage(chatID, "program set")
 			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			sendMessage(bot, chatID, "your program set")
 
 			delete(users, userID)
 		}
