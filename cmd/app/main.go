@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -129,7 +130,16 @@ func main() {
 			msg := tgbotapi.NewMessage(chatID, "program set")
 			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 			sendMessage(bot, chatID, "your program set")
-
+			sendMessage(bot, chatID, "day started, then you day will end, write restart to get day result")
+			sendMessage(bot, chatID, "write you calories")
+			calories := update.Message.Text
+			sendMessage(bot, chatID, "write you proteins")
+			proteins := update.Message.Text
+			sendMessage(bot, chatID, "write you fats")
+			fats := update.Message.Text
+			sendMessage(bot, chatID, "write you carbohydrates")
+			carbohydrates := update.Message.Text
+			sendMessage(bot, chatID, fmt.Sprintf("your daily limits: %v %v %v %v", calories, proteins, fats, carbohydrates))
 			delete(users, userID)
 		}
 	}
