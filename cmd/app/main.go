@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"strconv"
-	calc "telegrambot/internal/calculate"
 	DB "telegrambot/internal/database"
+	"telegrambot/internal/limits"
 	Redis "telegrambot/internal/redis"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -30,7 +30,7 @@ func main() {
 		log.Panic(err)
 	}
 
-	log.Print("Бот запущен")
+	log.Print("bot starting")
 
 	type userData struct {
 		step    string
@@ -88,7 +88,7 @@ func main() {
 		case "gender":
 			gender := update.Message.Text
 			if gender != "м" && gender != "ж" {
-				sendMessage(bot, chatID, "Ошибка! Введите 'м' или 'ж':")
+				sendMessage(bot, chatID, "insert м or ж")
 				continue
 			}
 
@@ -98,12 +98,12 @@ func main() {
 
 			sendMessage(bot, chatID, "choose your program:")
 
-			msg := tgbotapi.NewMessage(chatID, "Выберите программу:")
+			msg := tgbotapi.NewMessage(chatID, "choose program:")
 			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
 				tgbotapi.NewKeyboardButtonRow(
-					tgbotapi.NewKeyboardButton("Похудение"),
-					tgbotapi.NewKeyboardButton("Поддержание"),
-					tgbotapi.NewKeyboardButton("Набор массы"),
+					tgbotapi.NewKeyboardButton("lost"),
+					tgbotapi.NewKeyboardButton("set"),
+					tgbotapi.NewKeyboardButton("get"),
 				),
 			)
 			if _, err := bot.Send(msg); err != nil {
@@ -114,32 +114,44 @@ func main() {
 			data.program = program
 			users[userID] = data
 
-			err := DB.InsertUser(
-				username,
+			dailyLimits, err := limits.Calculate(
+				data.gender,
 				data.weight,
 				data.height,
-				data.gender,
-				data.program,
-				calc.Kforlost(data.gender, data.weight, data.height),
-				calc.Kforset(data.gender, data.weight, data.height),
-				calc.Kforget(data.gender, data.weight, data.height),
+				program,
 			)
 			if err != nil {
-				log.Printf("user not insert %v", err)
+				log.Printf("limits error: %v", err)
+				sendMessage(bot, chatID, "limits not calculated")
+				continue
 			}
-			msg := tgbotapi.NewMessage(chatID, "program set")
-			msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
-			sendMessage(bot, chatID, "your program set")
-			sendMessage(bot, chatID, "day started, then you day will end, write restart to get day result")
-			sendMessage(bot, chatID, "write you calories")
-			calories := update.Message.Text
-			sendMessage(bot, chatID, "write you proteins")
-			proteins := update.Message.Text
-			sendMessage(bot, chatID, "write you fats")
-			fats := update.Message.Text
-			sendMessage(bot, chatID, "write you carbohydrates")
-			carbohydrates := update.Message.Text
-			sendMessage(bot, chatID, fmt.Sprintf("your daily limits: %v %v %v %v", calories, proteins, fats, carbohydrates))
+
+			if err := Redis.SetUserLimits(username, dailyLimits); err != nil {
+				log.Printf("redis error: %v", err)
+				sendMessage(bot, chatID, "limits not set")
+				continue
+			}
+
+			msg := fmt.Sprintf(`
+				PROGRAM %v
+				DAILY LIMITS:
+				calories: %v 
+				proteins: %v 
+				fats: %v 
+				carbs: %v 
+				`,
+				program,
+				dailyLimits.Calories,
+				dailyLimits.Proteins,
+				dailyLimits.Fats,
+				dailyLimits.Carbs)
+
+			msgConfig := tgbotapi.NewMessage(chatID, msg)
+			msgConfig.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			if _, err := bot.Send(msgConfig); err != nil {
+				log.Printf("send error: %v", err)
+			}
+
 			delete(users, userID)
 		}
 	}
