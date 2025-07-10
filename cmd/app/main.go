@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	DB "telegrambot/internal/database"
 	"telegrambot/internal/limits"
 	Redis "telegrambot/internal/redis"
@@ -54,6 +55,11 @@ func main() {
 		if update.Message.IsCommand() && update.Message.Command() == "start" {
 			users[userID] = userData{step: "weight"}
 			sendMessage(bot, chatID, "Insert you kilo weight")
+			continue
+		}
+		if update.Message.IsCommand() && update.Message.Command() == "addmeal" {
+			users[userID] = userData{step: "meal_input"}
+			sendMessage(bot, chatID, "Введите КБЖУ приёма пищи в формате:\nКалории Белки Жиры Углеводы\nПример: 350 25 10 45")
 			continue
 		}
 
@@ -113,6 +119,7 @@ func main() {
 			program := update.Message.Text
 			data.program = program
 			users[userID] = data
+			data.step = "meal_input"
 
 			dailyLimits, err := limits.Calculate(
 				data.gender,
@@ -153,6 +160,54 @@ func main() {
 			}
 
 			delete(users, userID)
+		case "meal_input":
+			if update.Message.Text == "/addmeal" {
+				users[userID] = userData{step: "meal_input"}
+				sendMessage(bot, chatID, "INSERT CPFC IN FORMAT:0 0 0 0")
+				continue
+			}
+
+			if data.step == "meal_input" {
+				parts := strings.Fields(update.Message.Text)
+				if len(parts) != 4 {
+					sendMessage(bot, chatID, "Insert 4 numbers")
+					continue
+				}
+
+				calories, err1 := strconv.Atoi(parts[0])
+				proteins, err2 := strconv.Atoi(parts[1])
+				fats, err3 := strconv.Atoi(parts[2])
+				carbs, err4 := strconv.Atoi(parts[3])
+
+				if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+					sendMessage(bot, chatID, "error")
+					continue
+				}
+
+				remaining, err := Redis.SubtractMeal(username, calories, proteins, fats, carbs)
+				if err != nil {
+					log.Printf("update error %v", err)
+					sendMessage(bot, chatID, "error data update")
+					continue
+				}
+
+				response := fmt.Sprintf(`
+					meal add:
+					calories: %d
+					proteins: %d 
+					fats: %d 
+					carbs: %d 
+					`,
+					remaining.Calories,
+					remaining.Proteins,
+					remaining.Fats,
+					remaining.Carbs,
+				)
+
+				sendMessage(bot, chatID, response)
+				delete(users, userID)
+				continue
+			}
 		}
 	}
 }

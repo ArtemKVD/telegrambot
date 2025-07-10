@@ -2,8 +2,10 @@ package Redis
 
 import (
 	"context"
+	"log"
 	"os"
 	"strconv"
+	"time"
 
 	limits "telegrambot/internal/limits"
 
@@ -28,19 +30,22 @@ func InitRedis() error {
 
 func SetUserLimits(username string, limits limits.DailyLimits) error {
 
-	data := map[string]int{
-		"calories": limits.Calories,
-		"proteins": limits.Proteins,
-		"fats":     limits.Fats,
-		"carbs":    limits.Carbs,
-	}
+	expireTime := time.Now().Add(24 * time.Hour).Truncate(24 * time.Hour)
+	ttl := time.Until(expireTime)
 
-	err := Client.HSet(ctx, "user:"+username, data).Err()
+	err := Client.HSet(ctx, "user:"+username,
+		"calories", limits.Calories,
+		"proteins", limits.Proteins,
+		"fats", limits.Fats,
+		"carbs", limits.Carbs,
+	).Err()
+
 	if err != nil {
+		log.Printf("error set limits %v", err)
 		return err
 	}
 
-	return err
+	return Client.Expire(ctx, "user:"+username, ttl).Err()
 }
 
 func GetUserLimits(username string) (limits.DailyLimits, error) {
@@ -49,10 +54,22 @@ func GetUserLimits(username string) (limits.DailyLimits, error) {
 		return limits.DailyLimits{}, err
 	}
 
-	calories, _ := strconv.Atoi(result["calories"])
-	proteins, _ := strconv.Atoi(result["proteins"])
-	fats, _ := strconv.Atoi(result["fats"])
-	carbs, _ := strconv.Atoi(result["carbs"])
+	var (
+		calories, proteins, fats, carbs int
+	)
+
+	if val, err := strconv.Atoi(result["calories"]); err == nil {
+		calories = val
+	}
+	if val, err := strconv.Atoi(result["proteins"]); err == nil {
+		proteins = val
+	}
+	if val, err := strconv.Atoi(result["fats"]); err == nil {
+		fats = val
+	}
+	if val, err := strconv.Atoi(result["carbs"]); err == nil {
+		carbs = val
+	}
 
 	return limits.DailyLimits{
 		Calories: calories,
@@ -60,4 +77,26 @@ func GetUserLimits(username string) (limits.DailyLimits, error) {
 		Fats:     fats,
 		Carbs:    carbs,
 	}, nil
+}
+
+func SubtractMeal(username string, calories, proteins, fats, carbs int) (limits.DailyLimits, error) {
+
+	_, err := Client.HIncrBy(ctx, "user:"+username, "calories", -int64(calories)).Result()
+	if err != nil {
+		return limits.DailyLimits{}, err
+	}
+	_, err = Client.HIncrBy(ctx, "user:"+username, "proteins", -int64(proteins)).Result()
+	if err != nil {
+		return limits.DailyLimits{}, err
+	}
+	_, err = Client.HIncrBy(ctx, "user:"+username, "fats", -int64(fats)).Result()
+	if err != nil {
+		return limits.DailyLimits{}, err
+	}
+	_, err = Client.HIncrBy(ctx, "user:"+username, "carbs", -int64(carbs)).Result()
+	if err != nil {
+		return limits.DailyLimits{}, err
+	}
+
+	return GetUserLimits(username)
 }
