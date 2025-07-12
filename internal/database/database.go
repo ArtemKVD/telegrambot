@@ -9,6 +9,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type UserData struct {
+	Gender  string
+	Weight  string
+	Height  string
+	Program string
+}
+
 var Db *sql.DB
 
 func SetDbConfig() error {
@@ -52,4 +59,20 @@ func InsertUser(username, weight, height, gender, program string, lost, set, get
 		username, weight, height, gender, lost, set, get, program)
 
 	return err
+}
+
+func GetUserData(db *sql.DB, username string) (UserData, error) {
+	var data UserData
+	err := db.QueryRow(`
+		SELECT gender, weight, height, program 
+		FROM bot_users 
+		WHERE username = $1`,
+		username,
+	).Scan(&data.Gender, &data.Weight, &data.Height, &data.Program)
+
+	if err != nil {
+		return UserData{}, fmt.Errorf("get data error: %v", err)
+	}
+
+	return data, nil
 }

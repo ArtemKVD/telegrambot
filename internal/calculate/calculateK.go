@@ -15,7 +15,7 @@ func Kforset(gender, heights, weights string) int {
 	if err != nil {
 		log.Print("convert error")
 	}
-	if gender == "м" {
+	if gender == "m" {
 		return int(90 + 13.4*float64(weight) + 4.8*float64(height))
 	} else {
 		return int(450 + 9.2*float64(weight) + 3.1*float64(height))
@@ -31,7 +31,7 @@ func Kforlost(gender, heights, weights string) int {
 	if err != nil {
 		log.Print("convert error")
 	}
-	if gender == "м" {
+	if gender == "m" {
 		return int(90 + 13.4*float64(weight) + 4.8*float64(height) - 2.5*float64(weight))
 	} else {
 		return int(450 + 9.2*float64(weight) + 3.1*float64(height) - 2*float64(weight))
@@ -47,7 +47,7 @@ func Kforget(gender, heights, weights string) int {
 	if err != nil {
 		log.Print("convert error")
 	}
-	if gender == "м" {
+	if gender == "m" {
 		return int(90 + 13.4*float64(weight) + 4.8*float64(height) + 2.5*float64(weight))
 	} else {
 		return int(450 + 9.2*float64(weight) + 3.1*float64(height) + 2*float64(weight))

@@ -6,8 +6,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	calc "telegrambot/internal/calculate"
 	DB "telegrambot/internal/database"
-	"telegrambot/internal/limits"
+	limits "telegrambot/internal/limits"
 	Redis "telegrambot/internal/redis"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -62,6 +63,47 @@ func main() {
 			sendMessage(bot, chatID, "Insert CPFC in format 0 0 0 0")
 			continue
 		}
+		if update.Message.IsCommand() && update.Message.Command() == "last" {
+			userData, err := DB.GetUserData(DB.Db, username)
+			log.Println(userData.Gender, userData.Height, userData.Program, userData.Weight)
+			if err != nil {
+				log.Printf("get data error: %v", err)
+				sendMessage(bot, chatID, "get data error write /start")
+				continue
+			}
+
+			dailyLimits, err := limits.Calculate(
+				userData.Gender,
+				userData.Weight,
+				userData.Height,
+				userData.Program,
+			)
+			log.Println(userData.Gender, userData.Weight, userData.Height, userData.Program)
+			if err != nil {
+				log.Printf("limits error %v", err)
+				sendMessage(bot, chatID, "limits error")
+				continue
+			}
+
+			if err := Redis.SetUserLimits(username, dailyLimits); err != nil {
+				log.Printf("Redis error %v", err)
+				sendMessage(bot, chatID, "update limits error")
+				continue
+			}
+
+			sendMessage(bot, chatID, fmt.Sprintf(`
+				limits updated
+				calories: %d 
+				proteins: %d 
+				fats: %d 
+				carbs: %d `,
+				dailyLimits.Calories,
+				dailyLimits.Proteins,
+				dailyLimits.Fats,
+				dailyLimits.Carbs))
+
+			continue
+		}
 
 		data, exists := users[userID]
 		if !exists {
@@ -93,8 +135,8 @@ func main() {
 
 		case "gender":
 			gender := update.Message.Text
-			if gender != "м" && gender != "ж" {
-				sendMessage(bot, chatID, "insert м or ж")
+			if gender != "m" && gender != "w" {
+				sendMessage(bot, chatID, "insert m or w")
 				continue
 			}
 
@@ -127,6 +169,8 @@ func main() {
 				data.height,
 				program,
 			)
+			log.Println(data.gender, data.height, data.program, data.weight)
+			DB.InsertUser(username, data.weight, data.height, data.gender, data.program, calc.Kforset(data.gender, data.height, data.weight), calc.Kforget(data.gender, data.height, data.weight), calc.Kforlost(data.gender, data.height, data.weight))
 			if err != nil {
 				log.Printf("limits error: %v", err)
 				sendMessage(bot, chatID, "limits not calculated")

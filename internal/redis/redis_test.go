@@ -9,9 +9,9 @@ import (
 
 func TestInitRedis(T *testing.T) {
 	Client = redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_ADDR"), // "localhost:6379"
-		Password: os.Getenv("REDIS_PASS"), // ""
-		DB:       0,                       // используем DB по умолчанию
+		Addr:     os.Getenv("REDIS_ADDR"),
+		Password: os.Getenv("REDIS_PASS"),
+		DB:       0,
 	})
 
 	_, err := Client.Ping(ctx).Result()

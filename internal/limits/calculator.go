@@ -14,25 +14,19 @@ type DailyLimits struct {
 func Calculate(gender, weightStr, heightStr, program string) (DailyLimits, error) {
 
 	var calories int
-	switch program {
-	case "lost":
-		calories = calc.Kforlost(gender, weightStr, heightStr)
-	case "set":
-		calories = calc.Kforset(gender, weightStr, heightStr)
-	case "get":
-		calories = calc.Kforget(gender, weightStr, heightStr)
-	default:
-		calories = calc.Kforset(gender, weightStr, heightStr)
-	}
-
 	var proteins, fats, carbs int
 	switch program {
 	case "lost":
+		calories = calc.Kforlost(gender, weightStr, heightStr)
 		proteins, fats, carbs = calc.Lost(calories)
 	case "set":
+		calories = calc.Kforset(gender, weightStr, heightStr)
 		proteins, fats, carbs = calc.Set(calories)
 	case "get":
+		calories = calc.Kforget(gender, weightStr, heightStr)
 		proteins, fats, carbs = calc.Get(calories)
+	default:
+		calories = calc.Kforset(gender, weightStr, heightStr)
 	}
 
 	return DailyLimits{
