@@ -55,6 +55,8 @@ func main() {
 
 		if update.Message.IsCommand() && update.Message.Command() == "start" {
 			users[userID] = userData{step: "weight"}
+			sendMessage(bot, chatID, "This bot will help you monitor your diet, now you need to enter some data so that it calculates the norm of calories, proteins, fats and carbohydrates for losing weight, maintaining and gaining weight, after which you can add meals and the bot will show you how much you have left to eat so as not to go beyond the norm")
+			sendMessage(bot, chatID, "use commad /add_meal for add meal or /last after last meal of the day")
 			sendMessage(bot, chatID, "Insert you kilo weight")
 			continue
 		}
@@ -143,8 +145,6 @@ func main() {
 			data.gender = gender
 			data.step = "program"
 			users[userID] = data
-
-			sendMessage(bot, chatID, "choose your program:")
 
 			msg := tgbotapi.NewMessage(chatID, "choose program:")
 			msg.ReplyMarkup = tgbotapi.NewReplyKeyboard(
