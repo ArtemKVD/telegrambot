@@ -1,0 +1,38 @@
+services:
+  bot:
+    image: telegrambot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
+      - DB_HOST={DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-network
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend-network
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
